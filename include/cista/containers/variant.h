@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cinttypes>
+#include <cstddef>
 #include <algorithm>
 #include <array>
 #include <limits>
@@ -323,8 +324,9 @@ struct variant {
         break;
     }
 
-    if constexpr (B + 15U < sizeof...(T)) {
-      return apply<F, B + 16U>(std::forward<F>(f), std::forward<Vs>(vs)...);
+    if constexpr (B + 16U < sizeof...(T)) {
+      return apply<F, B + 16U>(std::forward<F>(f), idx,
+                               std::forward<Vs>(vs)...);
     }
 
 #ifndef _MSC_VER
@@ -354,7 +356,11 @@ struct variant {
   }
 
   index_t idx_{NO_VALUE};
-  std::aligned_union_t<0, T...> storage_{};
+  static constexpr auto const kStorageAlign = std::max({alignof(T)...});
+  static constexpr auto const kStorageSize =
+      (std::max({sizeof(T)...}) + kStorageAlign - 1U) / kStorageAlign *
+      kStorageAlign;
+  alignas(T...) std::byte storage_[kStorageSize]{};
 };
 
 template <typename T, typename... Ts>
